@@ -1,35 +1,65 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+/* eslint-disable react/no-unknown-property */
+import { useEffect, useState } from "react";
+import SearchBar from "./components/SearchBar/SearchBar";
+import WeatherDisplay from "./components/Weather/WeatherDisplay";
+import {
+  getWeatherByCity,
+  getWeatherByCoordinates,
+} from "./services/weatherServices";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
+  const [weatherData, setWeatherData] = useState(null);
+  const [error, setError] = useState("");
+
+  // Fetch weather by city name
+  const fetchWeatherByCity = async (city) => {
+    try {
+      const data = await getWeatherByCity(city);
+      setWeatherData(data);
+      setError(""); // Clear any previous error
+    } catch (err) {
+      setError("City not found or unable to fetch data.");
+    }
+  };
+
+  // Fetch weather by coordinates (for current location)
+  const fetchWeatherByLocation = async () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const data = await getWeatherByCoordinates(latitude, longitude);
+            setWeatherData(data);
+            setError("");
+          } catch (err) {
+            setError("Unable to fetch data for your location.");
+          }
+        },
+        () => {
+          setError("Location access denied.");
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser.");
+    }
+  };
+
+  // Load current location weather data on initial load
+  useEffect(() => {
+    fetchWeatherByLocation();
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="d-flex flex-column align-items-center justify-content-center vh-100">
+        <h1 className="text-center mb-3">Weather App</h1>
+        <SearchBar onSearch={fetchWeatherByCity} />
+        {error && <p className="text-danger">{error}</p>}
+        {weatherData && <WeatherDisplay weather={weatherData} />}
+  
+    </div>
+  );
+};
 
-export default App
+export default App;
